@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
-import { Menu, X, Globe, Sun, Moon, Monitor, Anchor, Shield } from 'lucide-react';
+import { Menu, X, Globe, Sun, Moon, Monitor, Anchor } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
 
-interface HeaderProps {
-  onAdminClick?: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onAdminClick }) => {
+const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme, isDark } = useTheme();
-  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -65,25 +59,6 @@ const Header: React.FC<HeaderProps> = ({ onAdminClick }) => {
 
           {/* Controls */}
           <div className="flex items-center space-x-4">
-            {/* Admin Access */}
-            {isAuthenticated && isAdmin ? (
-              <button
-                onClick={logout}
-                className="flex items-center space-x-1 p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <Shield className="h-4 w-4" />
-                <span className="text-sm">Logout</span>
-              </button>
-            ) : (
-              <button
-                onClick={onAdminClick}
-                className="flex items-center space-x-1 p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <Shield className="h-4 w-4" />
-                <span className="text-sm">Admin</span>
-              </button>
-            )}
-
             {/* Language Selector */}
             <div className="relative">
               <button

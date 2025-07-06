@@ -11,6 +11,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import ContactMessages from './ContactMessages';
 import TrackingManagement from './TrackingManagement';
 import DashboardStats from './DashboardStats';
@@ -18,6 +19,7 @@ import DashboardStats from './DashboardStats';
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
@@ -44,6 +46,10 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
@@ -83,12 +89,22 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
-              <button
-                onClick={logout}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
+              <div className="flex space-x-1">
+                <a
+                  href="/"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="Go to main website"
+                >
+                  <Package className="h-5 w-5" />
+                </a>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="Logout"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

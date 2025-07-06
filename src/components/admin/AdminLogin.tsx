@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-interface AdminLoginProps {
-  onLoginSuccess: () => void;
-}
-
-const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
+const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +20,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     try {
       const success = await login(email, password);
       if (success) {
-        onLoginSuccess();
+        navigate('/admin');
       } else {
         setError('Invalid email or password');
       }
@@ -46,6 +44,14 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Access the admin dashboard
           </p>
+          <div className="mt-4 text-center">
+            <a
+              href="/"
+              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+            >
+              ← Back to main website
+            </a>
+          </div>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">

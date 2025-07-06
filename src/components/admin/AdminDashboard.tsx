@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import ContactMessages from './ContactMessages';
 import TrackingManagement from './TrackingManagement';
 import DashboardStats from './DashboardStats';
+import AdminManagement from './AdminManagement';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -25,7 +26,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
     { id: 'messages', name: 'Messages', icon: MessageSquare },
     { id: 'tracking', name: 'Tracking', icon: Package },
-    { id: 'users', name: 'Users', icon: Users },
+    { id: 'admins', name: 'Admins', icon: Users },
     { id: 'settings', name: 'Settings', icon: Settings },
   ];
 
@@ -37,8 +38,8 @@ const AdminDashboard: React.FC = () => {
         return <ContactMessages />;
       case 'tracking':
         return <TrackingManagement />;
-      case 'users':
-        return <div className="p-6">Users management coming soon...</div>;
+      case 'admins':
+        return <AdminManagement />;
       case 'settings':
         return <div className="p-6">Settings panel coming soon...</div>;
       default:

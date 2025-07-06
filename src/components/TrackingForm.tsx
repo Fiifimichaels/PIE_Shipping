@@ -1,34 +1,48 @@
 import React, { useState } from 'react';
 import { Search, Package, MapPin, Clock, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { trackingService } from '../services/trackingService';
+import { TrackingInfo, TrackingEvent } from '../lib/supabase';
 
 const TrackingForm: React.FC = () => {
   const { t } = useLanguage();
   const [trackingNumber, setTrackingNumber] = useState('');
-  const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [trackingResult, setTrackingResult] = useState<{
+    tracking: TrackingInfo;
+    events: TrackingEvent[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trackingNumber.trim()) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setTrackingResult({
-        trackingNumber,
-        status: 'In Transit',
-        location: 'Singapore Port',
-        estimatedDelivery: '2024-01-15',
-        events: [
-          { date: '2024-01-10', time: '14:30', location: 'Origin Port', status: 'Picked up' },
-          { date: '2024-01-12', time: '09:15', location: 'Transit Hub', status: 'In transit' },
-          { date: '2024-01-13', time: '16:20', location: 'Singapore Port', status: 'Arrived at port' },
-        ]
-      });
+    setError(null);
+
+    try {
+      const result = await trackingService.getTrackingInfo(trackingNumber);
+      
+      if (result.error) {
+        setError(result.error);
+        setTrackingResult(null);
+      } else if (result.tracking) {
+        setTrackingResult({
+          tracking: result.tracking,
+          events: result.events
+        });
+      } else {
+        setError('Tracking number not found');
+        setTrackingResult(null);
+      }
+    } catch (error) {
+      console.error('Error tracking shipment:', error);
+      setError('Failed to track shipment. Please try again.');
+      setTrackingResult(null);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -71,28 +85,43 @@ const TrackingForm: React.FC = () => {
             </div>
           </form>
 
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           {trackingResult && (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Tracking: {trackingResult.trackingNumber}
+                    Tracking: {trackingResult.tracking.tracking_number}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Status: <span className="font-medium text-green-600">{trackingResult.status}</span>
+                    Status: <span className="font-medium text-green-600">{trackingResult.tracking.status}</span>
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600 dark:text-gray-400">Current Location</p>
                   <p className="font-medium text-gray-900 dark:text-white flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {trackingResult.location}
+                    {trackingResult.tracking.current_location || 'Unknown'}
                   </p>
                 </div>
               </div>
 
+              {trackingResult.tracking.estimated_delivery && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    <Clock className="h-4 w-4 inline mr-1" />
+                    Estimated Delivery: {new Date(trackingResult.tracking.estimated_delivery).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-4">
-                {trackingResult.events.map((event: any, index: number) => (
+                {trackingResult.events.map((event, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
@@ -100,10 +129,13 @@ const TrackingForm: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                         <Clock className="h-4 w-4" />
-                        <span>{event.date} {event.time}</span>
+                        <span>{event.event_date} {event.event_time}</span>
                       </div>
                       <p className="text-gray-900 dark:text-white font-medium">{event.status}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{event.location}</p>
+                      {event.description && (
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{event.description}</p>
+                      )}
                     </div>
                   </div>
                 ))}

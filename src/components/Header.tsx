@@ -32,6 +32,7 @@ const Header: React.FC<HeaderProps> = ({ onAdminClick }) => {
   const navigation = [
     { name: t('home'), href: '#home' },
     { name: t('services'), href: '#services' },
+    { name: 'Quote', href: '#quote' },
     { name: t('tracking'), href: '#tracking' },
     { name: t('about'), href: '#about' },
     { name: t('contact'), href: '#contact' },

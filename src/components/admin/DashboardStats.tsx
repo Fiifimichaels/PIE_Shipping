@@ -1,55 +1,94 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Package, MessageSquare, Users, DollarSign } from 'lucide-react';
+import { dashboardService, DashboardStats as StatsType } from '../../services/dashboardService';
 
 const DashboardStats: React.FC = () => {
-  const stats = [
+  const [stats, setStats] = React.useState<StatsType | null>(null);
+  const [recentActivity, setRecentActivity] = React.useState<Array<{
+    id: string;
+    action: string;
+    user: string;
+    time: string;
+    type: 'message' | 'tracking' | 'user';
+  }>>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const [statsData, activityData] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getRecentActivity()
+      ]);
+      setStats(statsData);
+      setRecentActivity(activityData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const statCards = stats ? [
     {
       name: 'Total Shipments',
-      value: '2,847',
+      value: stats.totalShipments.toString(),
       change: '+12%',
-      changeType: 'increase',
+      changeType: 'increase' as const,
       icon: Package,
       color: 'bg-blue-500',
     },
     {
       name: 'Active Messages',
-      value: '23',
+      value: stats.activeMessages.toString(),
       change: '+5%',
-      changeType: 'increase',
+      changeType: 'increase' as const,
       icon: MessageSquare,
       color: 'bg-green-500',
     },
     {
       name: 'Total Users',
-      value: '1,429',
+      value: stats.totalUsers.toString(),
       change: '+8%',
-      changeType: 'increase',
+      changeType: 'increase' as const,
       icon: Users,
       color: 'bg-purple-500',
     },
     {
-      name: 'Revenue',
-      value: '$89,247',
+      name: 'In Transit',
+      value: stats.inTransitShipments.toString(),
       change: '-2%',
-      changeType: 'decrease',
+      changeType: 'decrease' as const,
       icon: DollarSign,
       color: 'bg-orange-500',
     },
-  ];
+  ] : [];
 
-  const recentActivity = [
-    { id: 1, action: 'New shipment created', user: 'John Doe', time: '2 minutes ago' },
-    { id: 2, action: 'Message received', user: 'Jane Smith', time: '5 minutes ago' },
-    { id: 3, action: 'Shipment delivered', user: 'Mike Johnson', time: '10 minutes ago' },
-    { id: 4, action: 'New user registered', user: 'Sarah Wilson', time: '15 minutes ago' },
-    { id: 5, action: 'Payment processed', user: 'David Brown', time: '20 minutes ago' },
-  ];
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
+        {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -94,16 +133,22 @@ const DashboardStats: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
           <div className="space-y-4">
-            {recentActivity.map((activity) => (
+            {recentActivity.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center">No recent activity</p>
+            ) : (
+              recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  activity.type === 'message' ? 'bg-green-500' :
+                  activity.type === 'tracking' ? 'bg-blue-500' : 'bg-purple-500'
+                }`}></div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-900 dark:text-white">{activity.action}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">by {activity.user}</p>
                 </div>
                 <span className="text-xs text-gray-500 dark:text-gray-400">{activity.time}</span>
               </div>
-            ))}
+            )))}
           </div>
         </div>
       </div>

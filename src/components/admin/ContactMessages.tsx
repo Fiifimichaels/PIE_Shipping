@@ -1,64 +1,61 @@
 import React, { useState } from 'react';
 import { Mail, Phone, Calendar, Eye, Trash2, Reply } from 'lucide-react';
-
-interface Message {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  message: string;
-  status: 'unread' | 'read' | 'replied';
-  createdAt: string;
-}
+import { contactService } from '../../services/contactService';
+import { ContactMessage } from '../../lib/supabase';
 
 const ContactMessages: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 (555) 123-4567',
-      message: 'I need a quote for shipping 50 containers from New York to Shanghai.',
-      status: 'unread',
-      createdAt: '2024-01-15 10:30:00',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@company.com',
-      phone: '+1 (555) 987-6543',
-      message: 'Can you provide information about your air freight services to Europe?',
-      status: 'read',
-      createdAt: '2024-01-14 15:45:00',
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      email: 'mike@business.com',
-      phone: '+1 (555) 456-7890',
-      message: 'I have a time-sensitive shipment that needs to reach Tokyo by Friday.',
-      status: 'replied',
-      createdAt: '2024-01-13 09:15:00',
-    },
-  ]);
-
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read' | 'replied'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    loadMessages();
+  }, []);
+
+  const loadMessages = async () => {
+    setIsLoading(true);
+    try {
+      const data = await contactService.getMessages();
+      setMessages(data);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredMessages = messages.filter(message => 
     filter === 'all' || message.status === filter
   );
 
-  const updateMessageStatus = (id: number, status: Message['status']) => {
-    setMessages(messages.map(msg => 
-      msg.id === id ? { ...msg, status } : msg
-    ));
+  const updateMessageStatus = async (id: string, status: ContactMessage['status']) => {
+    try {
+      const result = await contactService.updateMessageStatus(id, status);
+      if (result.success) {
+        setMessages(messages.map(msg => 
+          msg.id === id ? { ...msg, status } : msg
+        ));
+        if (selectedMessage?.id === id) {
+          setSelectedMessage({ ...selectedMessage, status });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating message status:', error);
+    }
   };
 
-  const deleteMessage = (id: number) => {
-    setMessages(messages.filter(msg => msg.id !== id));
-    if (selectedMessage?.id === id) {
-      setSelectedMessage(null);
+  const deleteMessage = async (id: string) => {
+    try {
+      const result = await contactService.deleteMessage(id);
+      if (result.success) {
+        setMessages(messages.filter(msg => msg.id !== id));
+        if (selectedMessage?.id === id) {
+          setSelectedMessage(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
     }
   };
 
@@ -94,7 +91,16 @@ const ContactMessages: React.FC = () => {
           </div>
         </div>
         <div className="overflow-y-auto max-h-96">
-          {filteredMessages.map((message) => (
+          {isLoading ? (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              Loading messages...
+            </div>
+          ) : filteredMessages.length === 0 ? (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              No messages found
+            </div>
+          ) : (
+            filteredMessages.map((message) => (
             <div
               key={message.id}
               onClick={() => setSelectedMessage(message)}
@@ -110,9 +116,9 @@ const ContactMessages: React.FC = () => {
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{message.email}</p>
               <p className="text-sm text-gray-500 dark:text-gray-500 truncate">{message.message}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{message.createdAt}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{new Date(message.created_at).toLocaleString()}</p>
             </div>
-          ))}
+          )))}
         </div>
       </div>
 
@@ -156,11 +162,11 @@ const ContactMessages: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600 dark:text-gray-400">{selectedMessage.phone}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{selectedMessage.phone || 'N/A'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600 dark:text-gray-400">{selectedMessage.createdAt}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{new Date(selectedMessage.created_at).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(selectedMessage.status)}`}>

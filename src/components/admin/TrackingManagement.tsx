@@ -1,101 +1,124 @@
 import React, { useState } from 'react';
 import { Package, Plus, Edit, Trash2, MapPin, Calendar } from 'lucide-react';
-
-interface TrackingItem {
-  id: number;
-  trackingNumber: string;
-  status: string;
-  currentLocation: string;
-  estimatedDelivery: string;
-  customer: string;
-  origin: string;
-  destination: string;
-  createdAt: string;
-}
+import { trackingService } from '../../services/trackingService';
+import { TrackingInfo } from '../../lib/supabase';
 
 const TrackingManagement: React.FC = () => {
-  const [trackingItems, setTrackingItems] = useState<TrackingItem[]>([
-    {
-      id: 1,
-      trackingNumber: 'PIE123456789',
-      status: 'In Transit',
-      currentLocation: 'Singapore Port',
-      estimatedDelivery: '2024-01-20',
-      customer: 'John Doe',
-      origin: 'New York, USA',
-      destination: 'Shanghai, China',
-      createdAt: '2024-01-10',
-    },
-    {
-      id: 2,
-      trackingNumber: 'PIE987654321',
-      status: 'Delivered',
-      currentLocation: 'Tokyo Port',
-      estimatedDelivery: '2024-01-15',
-      customer: 'Jane Smith',
-      origin: 'Los Angeles, USA',
-      destination: 'Tokyo, Japan',
-      createdAt: '2024-01-08',
-    },
-  ]);
-
+  const [trackingItems, setTrackingItems] = useState<TrackingInfo[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<TrackingItem | null>(null);
+  const [editingItem, setEditingItem] = useState<TrackingInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
-    trackingNumber: '',
+    tracking_number: '',
     status: '',
-    currentLocation: '',
-    estimatedDelivery: '',
-    customer: '',
+    current_location: '',
+    estimated_delivery: '',
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
     origin: '',
     destination: '',
+    service_type: 'ocean' as 'ocean' | 'air' | 'land' | 'express',
+    weight: '',
+    dimensions: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingItem) {
-      setTrackingItems(trackingItems.map(item => 
-        item.id === editingItem.id 
-          ? { ...item, ...formData }
-          : item
-      ));
-      setEditingItem(null);
-    } else {
-      const newItem: TrackingItem = {
-        id: Date.now(),
-        ...formData,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setTrackingItems([...trackingItems, newItem]);
+  React.useEffect(() => {
+    loadTrackingItems();
+  }, []);
+
+  const loadTrackingItems = async () => {
+    setIsLoading(true);
+    try {
+      const data = await trackingService.getAllTracking();
+      setTrackingItems(data);
+    } catch (error) {
+      console.error('Error loading tracking items:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const submitData = {
+        tracking_number: formData.tracking_number,
+        customer_name: formData.customer_name,
+        customer_email: formData.customer_email || undefined,
+        customer_phone: formData.customer_phone || undefined,
+        origin: formData.origin,
+        destination: formData.destination,
+        status: formData.status,
+        current_location: formData.current_location || undefined,
+        estimated_delivery: formData.estimated_delivery || undefined,
+        service_type: formData.service_type,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        dimensions: formData.dimensions || undefined,
+      };
+
+      if (editingItem) {
+        const result = await trackingService.updateTracking(editingItem.id, submitData);
+        if (result.success) {
+          await loadTrackingItems();
+          setEditingItem(null);
+        }
+      } else {
+        const result = await trackingService.createTracking(submitData);
+        if (result.success) {
+          await loadTrackingItems();
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
+    
     setFormData({
-      trackingNumber: '',
+      tracking_number: '',
       status: '',
-      currentLocation: '',
-      estimatedDelivery: '',
-      customer: '',
+      current_location: '',
+      estimated_delivery: '',
+      customer_name: '',
+      customer_email: '',
+      customer_phone: '',
       origin: '',
       destination: '',
+      service_type: 'ocean',
+      weight: '',
+      dimensions: '',
     });
     setShowAddForm(false);
   };
 
-  const handleEdit = (item: TrackingItem) => {
+  const handleEdit = (item: TrackingInfo) => {
     setEditingItem(item);
     setFormData({
-      trackingNumber: item.trackingNumber,
+      tracking_number: item.tracking_number,
       status: item.status,
-      currentLocation: item.currentLocation,
-      estimatedDelivery: item.estimatedDelivery,
-      customer: item.customer,
+      current_location: item.current_location || '',
+      estimated_delivery: item.estimated_delivery || '',
+      customer_name: item.customer_name,
+      customer_email: item.customer_email || '',
+      customer_phone: item.customer_phone || '',
       origin: item.origin,
       destination: item.destination,
+      service_type: item.service_type,
+      weight: item.weight?.toString() || '',
+      dimensions: item.dimensions || '',
     });
     setShowAddForm(true);
   };
 
-  const handleDelete = (id: number) => {
-    setTrackingItems(trackingItems.filter(item => item.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      const result = await trackingService.deleteTracking(id);
+      if (result.success) {
+        setTrackingItems(trackingItems.filter(item => item.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting tracking item:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -135,11 +158,27 @@ const TrackingManagement: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={formData.trackingNumber}
-                onChange={(e) => setFormData({ ...formData, trackingNumber: e.target.value })}
+                value={formData.tracking_number}
+                onChange={(e) => setFormData({ ...formData, tracking_number: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Service Type
+              </label>
+              <select
+                value={formData.service_type}
+                onChange={(e) => setFormData({ ...formData, service_type: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                required
+              >
+                <option value="ocean">Ocean Freight</option>
+                <option value="air">Air Freight</option>
+                <option value="land">Land Transport</option>
+                <option value="express">Express</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -164,10 +203,9 @@ const TrackingManagement: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={formData.currentLocation}
-                onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+                value={formData.current_location}
+                onChange={(e) => setFormData({ ...formData, current_location: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                required
               />
             </div>
             <div>
@@ -176,10 +214,9 @@ const TrackingManagement: React.FC = () => {
               </label>
               <input
                 type="date"
-                value={formData.estimatedDelivery}
-                onChange={(e) => setFormData({ ...formData, estimatedDelivery: e.target.value })}
+                value={formData.estimated_delivery}
+                onChange={(e) => setFormData({ ...formData, estimated_delivery: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                required
               />
             </div>
             <div>
@@ -188,10 +225,32 @@ const TrackingManagement: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={formData.customer}
-                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                value={formData.customer_name}
+                onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Customer Email
+              </label>
+              <input
+                type="email"
+                value={formData.customer_email}
+                onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Customer Phone
+              </label>
+              <input
+                type="tel"
+                value={formData.customer_phone}
+                onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
@@ -206,7 +265,7 @@ const TrackingManagement: React.FC = () => {
                 required
               />
             </div>
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Destination
               </label>
@@ -218,20 +277,49 @@ const TrackingManagement: React.FC = () => {
                 required
               />
             </div>
-            <div className="md:col-span-2 flex justify-end space-x-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Dimensions
+              </label>
+              <input
+                type="text"
+                value={formData.dimensions}
+                onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                placeholder="L x W x H (cm)"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div className="md:col-span-3 flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={() => {
                   setShowAddForm(false);
                   setEditingItem(null);
                   setFormData({
-                    trackingNumber: '',
+                    tracking_number: '',
                     status: '',
-                    currentLocation: '',
-                    estimatedDelivery: '',
-                    customer: '',
+                    current_location: '',
+                    estimated_delivery: '',
+                    customer_name: '',
+                    customer_email: '',
+                    customer_phone: '',
                     origin: '',
                     destination: '',
+                    service_type: 'ocean',
+                    weight: '',
+                    dimensions: '',
                   });
                 }}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -279,18 +367,31 @@ const TrackingManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {trackingItems.map((item) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    Loading tracking items...
+                  </td>
+                </tr>
+              ) : trackingItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No tracking items found
+                  </td>
+                </tr>
+              ) : (
+                trackingItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Package className="h-4 w-4 text-gray-400 mr-2" />
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {item.trackingNumber}
+                        {item.tracking_number}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {item.customer}
+                    {item.customer_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(item.status)}`}>
@@ -300,7 +401,7 @@ const TrackingManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900 dark:text-white">
                       <MapPin className="h-4 w-4 text-gray-400 mr-1" />
-                      {item.currentLocation}
+                      {item.current_location || 'Unknown'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -310,7 +411,7 @@ const TrackingManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900 dark:text-white">
                       <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                      {item.estimatedDelivery}
+                      {item.estimated_delivery ? new Date(item.estimated_delivery).toLocaleDateString() : 'TBD'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -330,7 +431,7 @@ const TrackingManagement: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

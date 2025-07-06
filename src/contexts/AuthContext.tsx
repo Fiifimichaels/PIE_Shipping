@@ -1,14 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user';
-}
+import { authService } from '../services/authService';
+import { AdminUser } from '../lib/supabase';
 
 interface AuthContextType {
-  user: User | null;
+  user: AdminUser | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -18,7 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -28,19 +23,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call - replace with actual authentication
-    if (email === 'admin@preachitenterprise.com' && password === 'admin123') {
-      const adminUser: User = {
-        id: '1',
-        email: 'admin@preachitenterprise.com',
-        name: 'Admin User',
-        role: 'admin'
-      };
-      setUser(adminUser);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      return true;
+    try {
+      const result = await authService.login(email, password);
+      
+      if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

@@ -10,6 +10,7 @@ import About from './components/About';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
 import AdminAccess from './components/AdminAccess';
+import QuoteForm from './components/QuoteForm';
 
 function App() {
   const [showAdmin, setShowAdmin] = useState(false);
@@ -34,6 +35,7 @@ function App() {
             <Header onAdminClick={() => setShowAdmin(true)} />
             <Hero />
             <Services />
+            <QuoteForm />
             <TrackingForm />
             <About />
             <ContactForm />

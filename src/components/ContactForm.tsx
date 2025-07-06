@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { contactService } from '../services/contactService';
 
 const ContactForm: React.FC = () => {
   const { t } = useLanguage();
@@ -24,13 +25,21 @@ const ContactForm: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call to backend
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      setSubmitted(true);
+    try {
+      const result = await contactService.submitMessage(formData);
+      
+      if (result.success) {
+        setSubmitted(true);
+        setFormData({ name: '', email: '', phone: '', message: '' });
+      } else {
+        console.error('Error submitting form:', result.error);
+        // You could show an error message to the user here
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    } finally {
       setIsSubmitting(false);
-      setFormData({ name: '', email: '', phone: '', message: '' });
-    }, 1500);
+    }
   };
 
   const contactInfo = [

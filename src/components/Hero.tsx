@@ -17,15 +17,15 @@ const Hero: React.FC = () => {
             {t('heroSubtitle')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-colors">
+            <a href="#quote" className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-colors">
               <Package className="h-5 w-5" />
               <span>{t('getQuote')}</span>
               <ArrowRight className="h-5 w-5" />
-            </button>
-            <button className="bg-transparent border-2 border-white hover:bg-white hover:text-blue-900 text-white px-8 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-colors">
+            </a>
+            <a href="#tracking" className="bg-transparent border-2 border-white hover:bg-white hover:text-blue-900 text-white px-8 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-colors">
               <TrendingUp className="h-5 w-5" />
               <span>{t('trackShipment')}</span>
-            </button>
+            </a>
           </div>
         </div>
       </div>
